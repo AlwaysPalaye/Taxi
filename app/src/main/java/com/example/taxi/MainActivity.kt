@@ -1,5 +1,6 @@
 package com.example.taxi
 
+import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -18,6 +19,11 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.android.libraries.places.widget.Autocomplete
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.google.maps.android.PolyUtil
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -42,8 +48,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var tvDuration: TextView
     private lateinit var placesClient: PlacesClient
     private lateinit var customerId: String
-    private var selectedOrigin: Place? = null
-    private var selectedDestination: Place? = null
+    private var selectedOrigin: com.google.android.libraries.places.api.model.Place? = null
+    private var selectedDestination: com.google.android.libraries.places.api.model.Place? = null
 
     private val AUTOCOMPLETE_REQUEST_ORIGIN = 1
     private val AUTOCOMPLETE_REQUEST_DESTINATION = 2
@@ -101,7 +107,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun startPlacesAutocomplete(isOrigin: Boolean) {
-        val fields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.ADDRESS)
+        val fields = listOf(
+            com.google.android.libraries.places.api.model.Place.Field.ID,
+            com.google.android.libraries.places.api.model.Place.Field.NAME,
+            com.google.android.libraries.places.api.model.Place.Field.LAT_LNG,
+            com.google.android.libraries.places.api.model.Place.Field.ADDRESS
+        )
         val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.OVERLAY, fields)
             .setCountries(listOf("BR"))
             .build(this)
@@ -500,16 +511,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         )
         return results[0] / 1000.0 // Converte para quilômetros
     }
-    private fun calculateDistancesAndDurations(callback: (List<Pair<Place, PlaceInfo>>) -> Unit) {
+    private fun calculateDistancesAndDurations(callback: (List<Pair<SimulatedPlace, PlaceInfo>>) -> Unit) {
         val apiKey = "AIzaSyD7ODMWrn_tHKFeYmyNAV_1wpnKVpkdL9Q"
-        val placeInfoList = mutableListOf<Pair<Place, PlaceInfo>>()
+        val placeInfoList = mutableListOf<Pair<SimulatedPlace, PlaceInfo>>()
 
         // Simula a lista de lugares
         val places = listOf(
-            Place("Av. Pres. Kenedy, 2385 - Remédios, Osasco - SP, 02675-031", LatLng(-23.532881, -46.792759)),
-            Place("Av. Thomas Edison, 365 - Barra Funda, São Paulo - SP, 01140-000", LatLng(-23.525440, -46.664399)),
-            Place("Av. Brasil, 2033 - Jardim America, São Paulo - SP, 01431-001", LatLng(-23.567982, -46.683396)),
-            Place("Av. Paulista, 1538 - Bela Vista, São Paulo - SP, 01310-200", LatLng(-23.561706, -46.655980))
+            SimulatedPlace("Av. Pres. Kenedy, 2385 - Remédios, Osasco - SP, 02675-031", LatLng(-23.532881, -46.792759)),
+            SimulatedPlace("Av. Thomas Edison, 365 - Barra Funda, São Paulo - SP, 01140-000", LatLng(-23.525440, -46.664399)),
+            SimulatedPlace("Av. Brasil, 2033 - Jardim America, São Paulo - SP, 01431-001", LatLng(-23.567982, -46.683396)),
+            SimulatedPlace("Av. Paulista, 1538 - Bela Vista, São Paulo - SP, 01310-200", LatLng(-23.561706, -46.655980))
         )
 
         places.forEach { place ->
@@ -561,6 +572,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
     }
+
     private fun displayDistancesAndDurations() {
         calculateDistancesAndDurations { placeInfoList ->
             placeInfoList.forEach { (place, info) ->
@@ -578,6 +590,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
+
     private fun determineScenarioFromApi(originText: String, destinationText: String, callback: (List<TripOption>) -> Unit) {
         if (customerId.isEmpty() || originText.isEmpty() || destinationText.isEmpty()) {
             showToast("Preencha todos os campos.")
@@ -681,7 +694,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         makeRequest()
     }
 
-    data class Place(val name: String, val latLng: LatLng)
+    // Classes de dados
+    data class PlaceInfo(val destination: String, val distance: String, val duration: String)
+    data class SimulatedPlace(val name: String, val latLng: LatLng)
     data class TripOption(
         val id: Int,
         val name: String,
@@ -689,6 +704,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val vehicle: String,
         val rating: Double,
         val comment: String,
+        val value: Double
+    )
+    data class Trip(
+        val date: String,
+        val driverName: String,
+        val origin: String,
+        val destination: String,
+        val distance: Double,
+        val duration: String,
         val value: Double
     )
 }
